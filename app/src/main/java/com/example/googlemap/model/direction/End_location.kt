@@ -1,10 +1,10 @@
-
+package com.example.googlemap.model.direction
 import com.google.gson.annotations.Expose
 
 import com.google.gson.annotations.SerializedName
 
 
-class Start_location {
+class End_location {
 	@SerializedName("lat")
 	@Expose
 	var lat: Double? = null

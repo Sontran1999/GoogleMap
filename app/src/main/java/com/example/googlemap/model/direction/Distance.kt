@@ -1,10 +1,10 @@
-
+package com.example.googlemap.model.direction
 import com.google.gson.annotations.Expose
 
 import com.google.gson.annotations.SerializedName
 
 
-class Duration {
+class Distance {
 	@SerializedName("text")
 	@Expose
 	var text: String? = null

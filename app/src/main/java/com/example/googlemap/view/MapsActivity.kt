@@ -10,15 +10,16 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.view.WindowManager
+import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.SearchView
-import android.widget.Toolbar
+import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
-import androidx.coordinatorlayout.widget.CoordinatorLayout.Behavior.getTag
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.example.googlemap.R
+import com.example.googlemap.common.MapsFactory
 import com.example.googlemap.view.fragment.SearchFragment
 import com.example.googlemap.viewmodel.ViewModelAPI
 import com.google.android.gms.location.LocationServices
@@ -26,9 +27,9 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
-import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.MarkerOptions
+import com.google.android.gms.maps.model.*
 import com.google.android.gms.tasks.OnSuccessListener
+import kotlinx.android.synthetic.main.activity_maps.*
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 
 
@@ -38,19 +39,23 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
     private val PERMISSION_REQUEST = 1
     val arr = arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
     lateinit var mapFragment: SupportMapFragment
-    lateinit var viewModelAPI : ViewModelAPI
+    lateinit var viewModelAPI: ViewModelAPI
+    var check = false
+    lateinit var mRouteMarkerList: ArrayList<Marker>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_maps)
         mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync(this)
-        val btn_gps: ImageButton = findViewById(R.id.btn_gps)
-        val btn_sheet: ImageButton = findViewById(R.id.btn_sheet)
         btn_sheet.setOnClickListener(this)
         btn_gps.setOnClickListener(this)
+        btn_Search.setOnClickListener(this)
+        btn_clear.setOnClickListener(this)
         setActionBar()
         viewModelAPI = ViewModelAPI()
+        setFocus(false)
+        mRouteMarkerList = arrayListOf()
     }
 
     override fun onResume() {
@@ -61,6 +66,16 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
             getCurrentLocation()
         } else {
             ActivityCompat.requestPermissions(this, arr, PERMISSION_REQUEST)
+        }
+    }
+
+    fun setFocus(boolean: Boolean) {
+        if (boolean) {
+            layoutDirection.visibility = View.VISIBLE
+            card.visibility = View.GONE
+        } else {
+            card.visibility = View.VISIBLE
+            layoutDirection.visibility = View.GONE
         }
     }
 
@@ -87,19 +102,18 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
                         return@OnSuccessListener
                     }
                     val currentLocation = LatLng(location.latitude, location.longitude)
-                    mMap.addMarker(
-                        MarkerOptions().position(currentLocation)
-                            .title("Marker in current location")
-                    )
-                    mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, 20F))
+                    getAdressByGeocode(currentLocation)
                 })
     }
 
     override fun onMapReady(googleMap: GoogleMap) {
         mMap = googleMap
-//        val sydney = LatLng(-34.0, 151.0)
-//        mMap.addMarker(MarkerOptions().position(sydney).title("Marker in Sydney"))
-//        mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney))
+        mMap.setOnMapLongClickListener(object : GoogleMap.OnMapLongClickListener {
+            override fun onMapLongClick(p0: LatLng) {
+                getAdressByGeocode(p0)
+            }
+
+        })
     }
 
     override fun onRequestPermissionsResult(
@@ -109,7 +123,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
         when (requestCode) {
             PERMISSION_REQUEST -> for (grantResult in grantResults) {
                 if (grantResult != PackageManager.PERMISSION_GRANTED) {
-                    //TODO: Action when permission denied
+
                 }
             }
         }
@@ -121,8 +135,22 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
                 getCurrentLocation()
             }
             R.id.btn_sheet -> {
-                var searchFragment = SearchFragment()
-                searchFragment.show(supportFragmentManager, BottomSheetDialogFragment().tag)
+//                var searchFragment = SearchFragment()
+//                searchFragment.show(supportFragmentManager, BottomSheetDialogFragment().tag)
+                if (check) {
+                    setFocus(false)
+                    check = false
+                } else {
+                    setFocus(true)
+                    check = true
+                }
+            }
+            R.id.btn_Search -> {
+                viewModelAPI.removeMaker(mMap)
+                getDirection(txt_diemdi.text.toString(), txt_diemden.text.toString())
+            }
+            R.id.btn_clear -> {
+                viewModelAPI.removeMaker(mMap)
             }
         }
     }
@@ -137,6 +165,9 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
         searchView.setSearchableInfo(manager.getSearchableInfo(componentName))
         searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String): Boolean {
+                if (query != null) {
+                    locationBySearch(query)
+                }
                 return false
             }
 
@@ -151,11 +182,61 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, View.OnClickListen
         return super.onOptionsItemSelected(item)
     }
 
-//    fun getDirection(origin: String, destination: String){
-//        viewModelAPI.routes.observe(this,{
-//            if( it != null ){
-//
-//            }
-//        })
-//    }
+    fun locationBySearch(location: String) {
+        viewModelAPI.locationLiveData.observe(this, {
+            viewModelAPI.removeMaker(mMap)
+            if (it != null) {
+                if (it.status.equals("OK")) {
+                    it.results?.let { it1 -> viewModelAPI.setMarkersAndZoom(it1, mMap) }
+                } else {
+                    Toast.makeText(this, "Error", Toast.LENGTH_SHORT).show()
+                }
+            }
+        })
+        viewModelAPI.getLocation(location)
+    }
+
+    fun getDirection(origin: String, destination: String) {
+        viewModelAPI.direction.observe(this, {
+            viewModelAPI.removeMaker(mMap)
+            if (it != null) {
+                if (it.status.equals("OK")) {
+                    var min: Int = it.routes?.get(0)?.legs?.get(0)?.distance?.value!!.toInt()
+                    var count = 0
+                    var km = 0
+                    it.routes?.forEachIndexed { index, routes ->
+                        km = it.routes?.get(index)?.legs?.get(0)?.distance?.value!!.toInt()
+                        if (km < min) {
+                            min = km
+                            count = index
+                        }
+                    }
+                    Toast.makeText(this, min.toString(), Toast.LENGTH_SHORT).show()
+                    it.routes?.get(count)
+                        ?.let { it1 -> viewModelAPI.setMarkersAndRoute(it1, this, mMap) }
+                } else {
+                    Toast.makeText(this, "Error", Toast.LENGTH_SHORT).show()
+                }
+            }
+        })
+        viewModelAPI.getDirection(origin, destination)
+    }
+
+    fun getAdressByGeocode(p0: LatLng) {
+        viewModelAPI.geocodeLiveData.observe(this, {
+            viewModelAPI.removeMaker(mMap)
+            if (it != null) {
+                val localMarkerOptions: MarkerOptions =
+                    MarkerOptions().position(p0)
+                        .title(p0.toString())
+                        .snippet(it.results?.get(0)?.formattedAddress)
+                val localMarker = mMap.addMarker(localMarkerOptions)
+                mRouteMarkerList.add(localMarker)
+                mMap.animateCamera(MapsFactory.autoZoomLevel(mRouteMarkerList))
+            }
+        })
+        var latLng: String = p0.latitude.toString() + "," + p0.longitude.toString()
+        viewModelAPI.getGeocode(latLng)
+
+    }
 }

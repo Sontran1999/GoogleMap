@@ -1,16 +1,17 @@
+package com.example.googlemap.model.direction
 import com.google.gson.annotations.Expose
 import com.google.gson.annotations.SerializedName
-import okhttp3.Route
 
 
-class Json4Kotlin_Base {
+
+class Direction {
 	@SerializedName("geocoded_waypoints")
 	@Expose
 	var geocodedWaypoints: List<Geocoded_waypoints>? = null
 
 	@SerializedName("routes")
 	@Expose
-	var routes: List<Route>? = null
+	var routes: List<Routes>? = null
 
 	@SerializedName("status")
 	@Expose

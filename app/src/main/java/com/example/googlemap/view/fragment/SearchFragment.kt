@@ -27,7 +27,11 @@ class SearchFragment : BottomSheetDialogFragment() {
     @SuppressLint("RestrictedApi")
     override fun setupDialog(dialog: Dialog, style: Int) {
         super.setupDialog(dialog, style)
-        val contentView = View.inflate(context,com.example.googlemap.R.layout.fragment_search, null)
+        val contentView = View.inflate(
+            context,
+            com.example.googlemap.R.layout.fragment_search,
+            null
+        )
         dialog.setContentView(contentView)
         val params = (contentView.parent as View).layoutParams as CoordinatorLayout.LayoutParams
         val behavior = params.behavior
@@ -36,4 +40,6 @@ class SearchFragment : BottomSheetDialogFragment() {
             behavior.setBottomSheetCallback(bottomSheetBehaviorCallback)
         }
     }
+
+
 }
