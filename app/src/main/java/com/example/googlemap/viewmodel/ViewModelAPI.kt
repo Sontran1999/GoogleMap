@@ -28,10 +28,6 @@ class ViewModelAPI : ViewModel() {
     var direction: MutableLiveData<Direction> = MutableLiveData()
     var locationLiveData: MutableLiveData<AddressbySearch> = MutableLiveData()
     var geocodeLiveData: MutableLiveData<Geocode> = MutableLiveData()
-    private val mTimeSquare = LatLng(40.758895, -73.985131)
-    private var mRouteMarkerList = ArrayList<Marker>()
-    private var mResultMarkerList = ArrayList<Marker>()
-    private lateinit var mRoutePolyline: Polyline
 
     fun getDirection(origin: String, destination: String) {
         val call =
@@ -104,62 +100,6 @@ class ViewModelAPI : ViewModel() {
             }
 
         })
-    }
-
-
-    @SuppressLint("NewApi")
-    fun setMarkersAndRoute(route: Routes, mContext: Context, mGoogleMap: GoogleMap) {
-        val startLatLng = LatLng(
-            route.legs?.get(0)?.startLocation?.lat!!,
-            route.legs?.get(0)?.startLocation?.lng!!
-        )
-        val startMarkerOptions: MarkerOptions =
-            MarkerOptions().position(startLatLng).title(route.legs?.get(0)?.startAddress)
-                .icon(
-                    BitmapDescriptorFactory.fromBitmap(MapsFactory.drawMarker(mContext, "S"))
-                )
-        val endLatLng = LatLng(
-            route.legs?.get(0)?.endLocation?.lat!!,
-            route.legs?.get(0)?.endLocation?.lng!!
-        )
-        val endMarkerOptions: MarkerOptions =
-            MarkerOptions().position(endLatLng).title(route.legs?.get(0)?.endAddress)
-                .icon(BitmapDescriptorFactory.fromBitmap(MapsFactory.drawMarker(mContext, "E")))
-        val startMarker = mGoogleMap.addMarker(startMarkerOptions)
-        val endMarker = mGoogleMap.addMarker(endMarkerOptions)
-        mRouteMarkerList.add(startMarker)
-        mRouteMarkerList.add(endMarker)
-
-        val polylineOptions = MapsFactory.drawRoute(mContext)
-        val pointsList = PolyUtil.decode(route.overviewPolyline?.points)
-        for (point in pointsList) {
-            polylineOptions.add(point)
-        }
-
-        mRoutePolyline = mGoogleMap.addPolyline(polylineOptions)
-
-        mGoogleMap.animateCamera(MapsFactory.autoZoomLevel(mRouteMarkerList))
-    }
-
-    fun setMarkersAndZoom(resultList: List<Result>, mGoogleMap: GoogleMap) {
-        val resultBitmap = BitmapDescriptorFactory.fromResource(R.drawable.ic_spot_marker)
-        for (result in resultList) {
-            val name = result.formattedAddress
-            val latitude = result.geometry?.location?.lat
-            val longitude = result.geometry?.location?.lng
-            val latLng = LatLng(latitude!!, longitude!!)
-            val markerOptions = MarkerOptions()
-            markerOptions.position(latLng).title(name).icon(resultBitmap)
-
-            val marker = mGoogleMap.addMarker(markerOptions)
-            mResultMarkerList.add(marker)
-        }
-
-        mGoogleMap.animateCamera(MapsFactory.autoZoomLevel(mResultMarkerList))
-    }
-
-    fun removeMaker(mGoogleMap: GoogleMap) {
-        mGoogleMap.clear()
     }
 
 }

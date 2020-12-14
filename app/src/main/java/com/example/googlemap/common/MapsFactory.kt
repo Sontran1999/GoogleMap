@@ -10,6 +10,7 @@ import androidx.annotation.RequiresApi
 import com.example.googlemap.R
 import com.google.android.gms.maps.CameraUpdate
 import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
 import com.google.android.gms.maps.model.Marker
@@ -71,5 +72,9 @@ object MapsFactory {
             polylineOptions.color(context.resources.getColor(R.color.black))
         }
         return polylineOptions
+    }
+
+    fun removeMaker(mGoogleMap: GoogleMap) {
+        mGoogleMap.clear()
     }
 }
